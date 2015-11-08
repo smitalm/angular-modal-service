@@ -80,34 +80,7 @@
             var closedDeferred = $q.defer();
             var inputs = {
               $scope: modalScope,
-              close: function(result, delay) {
-                if(delay === undefined || delay === null) delay = 0;
-                $timeout(function() {
-                  //  Resolve the 'close' promise.
-                  closeDeferred.resolve(result);
-
-                  //  Let angular remove the element and wait for animations to finish.
-                  $animate.leave(modalElement)
-                    .then(function () {
-                      //  Resolve the 'closed' promise.
-                      closedDeferred.resolve(result);
-
-                      //  We can now clean up the scope
-                      modalScope.$destroy();
-
-                      //  Unless we null out all of these objects we seem to suffer
-                      //  from memory leaks, if anyone can explain why then I'd
-                      //  be very interested to know.
-                      inputs.close = null;
-                      deferred = null;
-                      closeDeferred = null;
-                      modal = null;
-                      inputs = null;
-                      modalElement = null;
-                      modalScope = null;
-                    });
-                }, delay);
-              }
+              close: destroyFn
             };
 
             //  If we have provided any inputs, pass them to the controller.
@@ -139,6 +112,7 @@
               controller: modalController,
               scope: modalScope,
               element: modalElement,
+              destroy: destroyFn,
               close: closeDeferred.promise,
               closed: closedDeferred.promise
             };
@@ -146,6 +120,34 @@
             //  ...which is passed to the caller via the promise.
             deferred.resolve(modal);
 
+            function destroyFn(result, delay) {
+              if(delay === undefined || delay === null) delay = 0;
+              $timeout(function() {
+                //  Resolve the 'close' promise.
+                closeDeferred.resolve(result);
+
+                //  Let angular remove the element and wait for animations to finish.
+                $animate.leave(modalElement)
+                    .then(function () {
+                      //  Resolve the 'closed' promise.
+                      closedDeferred.resolve(result);
+
+                      //  We can now clean up the scope
+                      modalScope.$destroy();
+
+                      //  Unless we null out all of these objects we seem to suffer
+                      //  from memory leaks, if anyone can explain why then I'd
+                      //  be very interested to know.
+                      inputs.close = null;
+                      deferred = null;
+                      closeDeferred = null;
+                      modal = null;
+                      inputs = null;
+                      modalElement = null;
+                      modalScope = null;
+                    });
+              }, delay);
+            }
           })
           .then(null, function(error) { // 'catch' doesn't work in IE8.
             deferred.reject(error);
